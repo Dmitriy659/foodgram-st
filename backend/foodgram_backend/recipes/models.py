@@ -28,3 +28,14 @@ class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.IntegerField(null=False, blank=False, validators=[MinValueValidator(1)])
+
+
+class Favourite(models.Model):
+    author = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE)
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.author} - {str(self.recipe)}"
+
+    class Meta:
+        unique_together = ('author', 'recipe')

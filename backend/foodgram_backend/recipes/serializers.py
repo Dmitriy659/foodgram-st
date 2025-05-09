@@ -1,13 +1,13 @@
 from django.core.exceptions import ValidationError
 from django.db.transaction import atomic
-from rest_framework.serializers import SerializerMethodField, ModelSerializer
 from drf_extra_fields.fields import Base64ImageField
-
-from .models import Recipe, RecipeIngredient
-from .utils import set_ingredients
 from ingredients.models import Ingredient
-from users.serializers import FoodgramUserSerializer
 from ingredients.serializers import IngredientSerializer
+from rest_framework.serializers import SerializerMethodField, ModelSerializer, CharField, IntegerField
+from users.serializers import FoodgramUserSerializer
+
+from .models import Recipe, RecipeIngredient, Favourite
+from .utils import set_ingredients
 
 
 class RecipeSerializer(ModelSerializer):
@@ -97,3 +97,20 @@ class RecipeSerializer(ModelSerializer):
 
         recipe.save()
         return recipe
+
+
+class FavouriteSerializer(ModelSerializer):
+    name = CharField(source="recipe.name", read_only=True)
+    image = SerializerMethodField()
+    cooking_time = IntegerField(source="recipe.cooking_time", read_only=True)
+
+    class Meta:
+        model = Favourite
+        fields = ("id", "name", "image", "cooking_time")
+
+    def get_image(self, obj):
+        request = self.context.get("request")
+        image_field = obj.recipe.image
+        if image_field:
+            return request.build_absolute_uri(image_field.url)
+        return None
