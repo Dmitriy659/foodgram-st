@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "djoser",
     "users.apps.UsersConfig",
     "ingredients.apps.IngredientsConfig",
+    "recipes.apps.RecipesConfig",
 ]
 
 MIDDLEWARE = [
