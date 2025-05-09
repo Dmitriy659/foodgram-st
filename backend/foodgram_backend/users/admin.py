@@ -6,7 +6,7 @@ from .models import FoodgramUser
 class FoodgramUserAdmin(UserAdmin):
     model = FoodgramUser
     list_display = ("email", "first_name", "last_name", "username", "is_superuser")
-    search_fields = ("email",)
+    search_fields = ("email", "username")
     ordering = ("email",)
 
     fieldsets = (
