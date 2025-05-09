@@ -19,6 +19,17 @@ class FoodgramUserSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, obj):
         return False  # Заглушка — всегда возвращаем False
 
+
+class FoodgramUserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = FoodgramUser
+        fields = (
+            'id', 'email', 'username',
+            'first_name', 'last_name', "password"
+        )
+
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = FoodgramUser(**validated_data)

@@ -26,11 +26,13 @@ class FoodgramUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True, null=False,
                                 validators=[
                                     RegexValidator(
-                                        regex=r"^[\w.@+-]+\z",
+                                        regex=r"^[\w.@+-]+$",
                                         message="Username may contain only letters,"
                                                 " digits and @/./+/-/_ characters.")
                                 ])
     avatar = models.ImageField(null=True, blank=True)
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
 
     objects = FoodgramUserManager()
 
