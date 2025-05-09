@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import MethodNotAllowed
 from .models import Recipe
-from .serializers import RecipeCreateSerializer
+from .serializers import RecipeSerializer
 from .permissions import AuthorPermission
 
 
@@ -10,9 +10,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
 
     def get_serializer_class(self):
-        if self.action == "create":
-            return RecipeCreateSerializer
-        return RecipeCreateSerializer  # TODO добавить сериализаторы для каждого метода
+        return RecipeSerializer  # TODO добавить сериализаторы для каждого метода
 
     def get_permissions(self):
         if self.action in ("create",):
