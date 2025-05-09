@@ -61,6 +61,10 @@ class RecipeSerializer(ModelSerializer):
         cnt = Ingredient.objects.filter(id__in=ing_ids).count()
         if cnt < len(ing_ids):
             raise ValidationError("Некоторые ингредиенты не существуют")
+        if not all(map(lambda x: x > 0, [ing["amount"] for ing in ingredients])):
+            raise ValidationError("Кол-во ингридиентов меньше 1")
+        if "image" in data and not data["image"]:
+            raise ValidationError("Нет изображения")
 
         data.update(
             {
