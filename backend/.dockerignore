@@ -1,4 +1,4 @@
-../.venv/
+.venv/
 .idle/
 media/
 db.sqlite3

@@ -1,9 +1,8 @@
 from core.serializers import RecipeMinSerializer
 from drf_extra_fields.fields import Base64ImageField
-from recipes.models import Recipe
 from rest_framework import serializers
 
-from .models import FoodgramUser
+from .models import FoodgramUser, Subscriber
 
 
 class FoodgramUserSerializer(serializers.ModelSerializer):
@@ -23,7 +22,14 @@ class FoodgramUserSerializer(serializers.ModelSerializer):
         )
 
     def get_is_subscribed(self, obj):
-        return False  # Заглушка — всегда возвращаем False
+        request = self.context.get('request')
+
+        if request and hasattr(request, 'user'):
+            user = request.user
+            if user.is_authenticated:
+                return Subscriber.objects.filter(publisher=obj, subscriber=user).exists()
+
+        return False
 
 
 class FoodgramUserCreateSerializer(serializers.ModelSerializer):

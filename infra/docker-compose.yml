@@ -14,7 +14,7 @@ services:
     env_file:
       - ../.env
   backend:
-    container_name: foodram-backend
+    container_name: foodgram-backend
     build: ../backend
     volumes:
       - static_dir:/app/static/
@@ -39,7 +39,7 @@ services:
       - ../frontend/build:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static_dir:/etc/nginx/html/static/
-      - media_dir:/etc/nginx/html/media/
+      - media_dir:/media/
     depends_on:
       - backend
       - frontend	  

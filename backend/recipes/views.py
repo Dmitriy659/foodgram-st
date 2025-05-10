@@ -1,6 +1,8 @@
 import io
 
 import pyshorteners
+from django.http.response import HttpResponse
+
 from core.pagination import CustomPagination
 from core.permissions import IsAuthenticatedBanned, AuthorPermission
 from core.serializers import RecipeMinSerializer
@@ -21,7 +23,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     """
     Класс для управления рецептами
     """
-    queryset = Recipe.objects.all().order_by("-create_date")
     pagination_class = CustomPagination
     serializer_class = RecipeSerializer
 
@@ -35,7 +36,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         raise MethodNotAllowed(f"Method {self.action} is not allowed")
 
     def get_queryset(self):
-        queryset = Recipe.objects.all()
+        queryset = Recipe.objects.all().order_by("-create_date")
 
         is_favorited = self.request.query_params.get("is_favorited")
         user = self.request.user
@@ -140,15 +141,14 @@ class DownloadShoppingCart(APIView):
                         "measure_unit": measure_unit,
                     }
 
-        buffer = io.StringIO()
-        buffer.write("Список ингредиентов:")
+        file_text = ["Список ингредиентов:"]
 
         for ingredient, details in ingredients_dict.items():
             amount = details["amount"]
             measure_unit = details["measure_unit"]
-            buffer.write(f"\n{ingredient}: {amount} {measure_unit}")
+            file_text.append(f"{ingredient}: {amount} {measure_unit}")
 
-        buffer.seek(0)
-        response = Response(buffer.getvalue(), content_type="text/plain; charset=utf-8")
+        file_text = "\n".join(file_text)
+        response = HttpResponse(file_text, content_type="text/plain; charset=utf-8")
         response["Content-Disposition"] = "attachment; filename='shopping_list.txt'"
         return response
