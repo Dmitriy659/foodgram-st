@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import FoodgramUser
 
 
+@admin.register(FoodgramUser)
 class FoodgramUserAdmin(UserAdmin):
     model = FoodgramUser
     list_display = ("email", "first_name", "last_name", "username", "is_superuser")
@@ -25,5 +26,3 @@ class FoodgramUserAdmin(UserAdmin):
                        "is_staff", "is_superuser", "is_active")}
          ),
     )
-
-admin.site.register(FoodgramUser, FoodgramUserAdmin)

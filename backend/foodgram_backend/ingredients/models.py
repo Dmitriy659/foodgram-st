@@ -7,3 +7,8 @@ class Ingredient(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        unique_together = ("name", "measurement_unit")
+        verbose_name = "Ингредиент"
+        verbose_name_plural = "Ингредиенты"

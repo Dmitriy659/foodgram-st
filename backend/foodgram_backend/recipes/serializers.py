@@ -11,7 +11,9 @@ from .utils import set_ingredients
 
 
 class RecipeSerializer(ModelSerializer):
-    """Сериализатор для рецептов."""
+    """
+    Сериализатор для рецептов
+    """
 
     author = FoodgramUserSerializer(read_only=True)
     ingredients = SerializerMethodField()
@@ -30,7 +32,9 @@ class RecipeSerializer(ModelSerializer):
         )
 
     def get_ingredients(self, recipe: Recipe):
-        """Получает список ингридиентов для рецепта."""
+        """
+        Получает список ингридиентов для рецепта
+        """
         ingredients = RecipeIngredient.objects.filter(recipe=recipe).select_related("ingredient")
         return [
             {
@@ -43,21 +47,27 @@ class RecipeSerializer(ModelSerializer):
         ]
 
     def get_is_favorited(self, recipe: Recipe) -> bool:
-        """Проверка - находится ли рецепт в избранном."""
+        """
+        Проверка - находится ли рецепт в избранном
+        """
         user = self.context["request"].user
         if user.is_anonymous:
             return False
         return Favourite.objects.filter(author=user, recipe=recipe).exists()
 
     def get_is_in_shopping_cart(self, recipe: Recipe) -> bool:
-        """Проверка - находится ли рецепт в списке  покупок."""
+        """
+        Проверка, находится ли рецепт в списке  покупок
+        """
         user = self.context["request"].user
         if user.is_anonymous:
             return False
         return ShoppingCart.objects.filter(author=user, recipe=recipe).exists()
 
     def validate(self, data):
-        """Проверка вводных данных при создании/редактировании рецепта."""
+        """
+        Проверка вводных данных при создании/редактировании рецепта
+        """
         ingredients = self.initial_data.get("ingredients")
 
         if not ingredients:
@@ -82,7 +92,9 @@ class RecipeSerializer(ModelSerializer):
 
     @atomic
     def create(self, validated_data: dict) -> Recipe:
-        """Создаёт рецепт."""
+        """
+        Создаёт рецепт
+        """
         ingredients: dict[int, tuple] = validated_data.pop("ingredients")
         recipe = Recipe.objects.create(**validated_data)
         set_ingredients(recipe, ingredients)
@@ -90,7 +102,9 @@ class RecipeSerializer(ModelSerializer):
 
     @atomic
     def update(self, recipe: Recipe, validated_data: dict):
-        """Обновляет рецепт."""
+        """
+        Обновляет рецепт
+        """
         ingredients = validated_data.pop("ingredients")
 
         for key, value in validated_data.items():

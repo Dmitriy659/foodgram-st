@@ -1,11 +1,15 @@
-from rest_framework import serializers
-from .models import FoodgramUser
-from .fields import Base64ImageField
+from core.serializers import RecipeMinSerializer
+from drf_extra_fields.fields import Base64ImageField
 from recipes.models import Recipe
-from core.serializer import RecipeMinSerializer
+from rest_framework import serializers
+
+from .models import FoodgramUser
 
 
 class FoodgramUserSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для получения данных о пользователях
+    """
     password = serializers.CharField(write_only=True, required=True)
     is_subscribed = serializers.SerializerMethodField(read_only=True)
     avatar = serializers.ImageField(required=False, allow_null=True)
@@ -13,9 +17,9 @@ class FoodgramUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodgramUser
         fields = (
-            'id', 'email', 'username',
-            'first_name', 'last_name',
-            'password', 'is_subscribed', 'avatar',
+            "id", "email", "username",
+            "first_name", "last_name",
+            "password", "is_subscribed", "avatar",
         )
 
     def get_is_subscribed(self, obj):
@@ -23,17 +27,20 @@ class FoodgramUserSerializer(serializers.ModelSerializer):
 
 
 class FoodgramUserCreateSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для создания юзера
+    """
     password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = FoodgramUser
         fields = (
-            'id', 'email', 'username',
-            'first_name', 'last_name', "password"
+            "id", "email", "username",
+            "first_name", "last_name", "password"
         )
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop("password")
         user = FoodgramUser(**validated_data)
         user.set_password(password)
         user.save()
@@ -46,6 +53,9 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для управления аватарками
+    """
     avatar = Base64ImageField(required=True)
 
     class Meta:
@@ -54,6 +64,9 @@ class UserAvatarSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionsSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для управление подпсиками
+    """
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
     is_subscribed = serializers.SerializerMethodField()
@@ -62,23 +75,23 @@ class SubscriptionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodgramUser
         fields = (
-            'id', 'username', 'email', 'first_name',
-            'last_name', 'is_subscribed', 'recipes', 'recipes_count', 'avatar'
+            "id", "username", "email", "first_name",
+            "last_name", "is_subscribed", "recipes", "recipes_count", "avatar"
         )
 
     def get_is_subscribed(self, obj):
         return True
 
     def get_recipes(self, obj):
-        request = self.context.get('request')
+        request = self.context.get("request")
         qs = obj.recipes.all()
-        limit = request.query_params.get('recipes_limit') if request else None
+        limit = request.query_params.get("recipes_limit") if request else None
         if limit:
             try:
                 qs = qs[:int(limit)]
             except ValueError:
                 pass
-        return RecipeMinSerializer(qs, many=True, context={'request': request}).data
+        return RecipeMinSerializer(qs, many=True, context={"request": request}).data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()

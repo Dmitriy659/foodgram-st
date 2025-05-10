@@ -1,10 +1,11 @@
-from rest_framework.serializers import SerializerMethodField, ModelSerializer
-
 from recipes.models import Recipe
+from rest_framework.serializers import SerializerMethodField, ModelSerializer
 
 
 class RecipeMinSerializer(ModelSerializer):
-    """Мини-сериализатор для Recipe: id, name, image (с абсолютным URL), cooking_time"""
+    """
+    Сериализатор с уменьшенным кол-вом полей
+    """
     image = SerializerMethodField()
 
     class Meta:
