@@ -1,32 +1,73 @@
 import io
 
+from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
+from django.urls.base import reverse
 from rest_framework import viewsets, status
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import pyshorteners
 
 from .models import Recipe, Favourite, ShoppingCart, RecipeIngredient
 from .permissions import AuthorPermission
 from .serializers import RecipeSerializer
-from .base import RecipeMinSerializer
+from core.pagination import CustomPagination
+from core.serializer import RecipeMinSerializer
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
-
-    def get_serializer_class(self):
-        return RecipeSerializer  # TODO добавить сериализаторы для каждого метода
+    pagination_class = CustomPagination
+    serializer_class = RecipeSerializer
 
     def get_permissions(self):
         if self.action in ("create",):
             return [IsAuthenticated()]
-        elif self.action in ("list", "retrieve"):
+        elif self.action in ("list", "retrieve", "get_link"):
             return [AllowAny()]
         elif self.action in ("partial_update", "destroy"):
             return [IsAuthenticated(), AuthorPermission()]
         raise MethodNotAllowed(f"Method {self.action} is not allowed")
+
+    def get_queryset(self):
+        queryset = Recipe.objects.all()
+
+
+        is_favorited = self.request.query_params.get('is_favorited')
+        user = self.request.user
+        if is_favorited == "1" and not user.is_anonymous:
+            queryset = queryset.filter(favourite__author=user)
+
+        is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
+        if is_in_shopping_cart == "1" and not user.is_anonymous:
+            queryset = queryset.filter(shoppingcart__author=user)
+
+        print(is_favorited, type(is_favorited), is_in_shopping_cart, type(is_in_shopping_cart))
+
+        author_id = self.request.query_params.get('author')
+        if author_id is not None:
+            queryset = queryset.filter(author_id=author_id)
+
+        return queryset
+
+    @action(detail=True, methods=['get'], url_path='get-link', url_name="get_link")
+    def get_link(self, request, pk=None):
+        """
+        GET /recipes/{id}/short-link/
+        Возвращает JSON {"short-link": "<uri>"} или 404, если рецепт не найден.
+        """
+        recipe = get_object_or_404(Recipe, pk=pk)
+
+        full_url = request.build_absolute_uri(
+            reverse('recipes-detail', args=[recipe.pk])
+        )
+
+        shortener = pyshorteners.Shortener()
+        short_url = shortener.tinyurl.short(full_url)
+
+        return Response({"short-link": short_url}, status=status.HTTP_200_OK)
 
 
 class BaseRecipeActionView(APIView):

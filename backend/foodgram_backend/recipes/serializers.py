@@ -8,7 +8,6 @@ from users.serializers import FoodgramUserSerializer
 
 from .models import Recipe, RecipeIngredient, Favourite, ShoppingCart
 from .utils import set_ingredients
-from .base import RecipeMinSerializer
 
 
 class RecipeSerializer(ModelSerializer):
@@ -45,11 +44,17 @@ class RecipeSerializer(ModelSerializer):
 
     def get_is_favorited(self, recipe: Recipe) -> bool:
         """Проверка - находится ли рецепт в избранном."""
-        return False  # TODO доделать
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        return Favourite.objects.filter(author=user, recipe=recipe).exists()
 
     def get_is_in_shopping_cart(self, recipe: Recipe) -> bool:
         """Проверка - находится ли рецепт в списке  покупок."""
-        return False  # TODO доделать
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        return ShoppingCart.objects.filter(author=user, recipe=recipe).exists()
 
     def validate(self, data):
         """Проверка вводных данных при создании/редактировании рецепта."""

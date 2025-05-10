@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from .models import FoodgramUser, Subscriber
+from .models import FoodgramUser
 from .fields import Base64ImageField
 from recipes.models import Recipe
-from recipes.base import RecipeMinSerializer
+from core.serializer import RecipeMinSerializer
 
 
 class FoodgramUserSerializer(serializers.ModelSerializer):

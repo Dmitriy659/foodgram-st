@@ -1,6 +1,6 @@
-from rest_framework.serializers import SerializerMethodField, ModelSerializer, CharField, IntegerField
+from rest_framework.serializers import SerializerMethodField, ModelSerializer
 
-from .models import Recipe
+from recipes.models import Recipe
 
 
 class RecipeMinSerializer(ModelSerializer):

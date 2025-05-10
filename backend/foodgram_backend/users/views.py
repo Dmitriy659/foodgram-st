@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db.models.query import Prefetch
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -11,7 +10,7 @@ from rest_framework.views import APIView
 
 from .serializers import (PasswordChangeSerializer, FoodgramUserSerializer,
                           UserAvatarSerializer, FoodgramUserCreateSerializer, SubscriptionsSerializer)
-from .pagination import CustomPagination
+from core.pagination import CustomPagination
 from .models import FoodgramUser, Subscriber
 
 from recipes.models import Recipe
@@ -120,29 +119,14 @@ class SubscriptionsView(APIView):
 
 
 class SubscriptionsListView(ListAPIView):
-    """Получение списка подписок текущего пользователя."""
-    permission_classes = [IsAuthenticated]
     serializer_class = SubscriptionsSerializer
+    permission_classes = [IsAuthenticated]
     pagination_class = CustomPagination
 
     def get_queryset(self):
-        queryset = FoodgramUser.objects.filter(
-            publishers__subscriber=self.request.user
-        ).prefetch_related(
-            Prefetch(
-                'recipes',
-                queryset=Recipe.objects.only('id', 'name', 'image', 'cooking_time')
-            )
-        ).distinct()
-
-        return queryset
-
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-
-        recipes_limit = request.query_params.get('recipes_limit')
-        if recipes_limit:
-            for item in response.data['results']:
-                item['recipes'] = item['recipes'][:int(recipes_limit)]
-
-        return response
+        # получаем всех publishers, на которых подписан request.user
+        user = self.request.user
+        publisher_ids = Subscriber.objects.filter(
+            subscriber=user
+        ).values_list('publisher_id', flat=True)
+        return FoodgramUser.objects.filter(id__in=publisher_ids)
