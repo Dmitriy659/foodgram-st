@@ -1,7 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.core.validators import RegexValidator
-from django.db.models.fields.related import ManyToManyField
 
 
 class FoodgramUserManager(BaseUserManager):
@@ -35,6 +34,10 @@ class FoodgramUser(AbstractBaseUser, PermissionsMixin):
 
     objects = FoodgramUserManager()
 
+    @property
+    def is_admin(self):
+        return self.is_staff and self.is_superuser
+
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name", "username"]
 
@@ -51,3 +54,5 @@ class Subscriber(models.Model):
 
     class Meta:
         unique_together = ("subscriber", "publisher")
+
+# TODO сортирвока публикаций по дате

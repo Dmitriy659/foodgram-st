@@ -12,6 +12,7 @@ class Recipe(models.Model):
     text = models.TextField(blank=False, null=False)
     cooking_time = models.IntegerField(blank=False, null=False,
                                        validators=[MinValueValidator(1)])
+    create_date = models.DateTimeField(auto_now_add=True)
     ingredients = ManyToManyField(
         verbose_name="Ингредиенты блюда",
         related_name="recipes",

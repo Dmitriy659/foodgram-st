@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, mixins, status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from .serializers import (PasswordChangeSerializer, FoodgramUserSerializer,
                           UserAvatarSerializer, FoodgramUserCreateSerializer, SubscriptionsSerializer)
 from core.pagination import CustomPagination
+from core.permissions import IsAuthenticatedBanned
 from .models import FoodgramUser, Subscriber
 
 from recipes.models import Recipe
@@ -33,7 +34,7 @@ class UserViewSet(mixins.CreateModelMixin,  # для регистрации
 
 
 class MeView(APIView):  # текущий пользователь
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
 
     def get(self, request):
         serializer = FoodgramUserSerializer(request.user)
@@ -41,7 +42,7 @@ class MeView(APIView):  # текущий пользователь
 
 
 class UserAvatarView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
 
     def put(self, request):
         serializer = UserAvatarSerializer(
@@ -58,7 +59,7 @@ class UserAvatarView(APIView):
 
 
 class SetPasswordView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
 
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data)
@@ -80,27 +81,23 @@ class SetPasswordView(APIView):
 
 
 class SubscriptionsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
 
     def post(self, request, user_id):
         publisher = get_object_or_404(FoodgramUser, id=user_id)
 
         if request.user == publisher:
             return Response(
-                {"detail": "Невозможно подписаться на самого себя."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-            # Проверка на уже существующую подписку
         if Subscriber.objects.filter(subscriber=request.user, publisher=publisher).exists():
             return Response(
-                {"detail": "Вы уже подписаны на этого пользователя."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         Subscriber.objects.create(subscriber=request.user, publisher=publisher)
 
-        # Возвращаем информацию о пользователе с подпиской
         publisher_data = SubscriptionsSerializer(
             publisher,
             context={'request': request}
@@ -120,7 +117,7 @@ class SubscriptionsView(APIView):
 
 class SubscriptionsListView(ListAPIView):
     serializer_class = SubscriptionsSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
     pagination_class = CustomPagination
 
     def get_queryset(self):

@@ -5,30 +5,30 @@ from django.shortcuts import get_object_or_404
 from django.urls.base import reverse
 from rest_framework import viewsets, status
 from rest_framework.exceptions import MethodNotAllowed
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import pyshorteners
 
 from .models import Recipe, Favourite, ShoppingCart, RecipeIngredient
-from .permissions import AuthorPermission
 from .serializers import RecipeSerializer
 from core.pagination import CustomPagination
 from core.serializer import RecipeMinSerializer
+from core.permissions import IsAuthenticatedBanned, AuthorPermission
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
+    queryset = Recipe.objects.all().order_by('-create_date')
     pagination_class = CustomPagination
     serializer_class = RecipeSerializer
 
     def get_permissions(self):
         if self.action in ("create",):
-            return [IsAuthenticated()]
+            return [IsAuthenticatedBanned()]
         elif self.action in ("list", "retrieve", "get_link"):
             return [AllowAny()]
         elif self.action in ("partial_update", "destroy"):
-            return [IsAuthenticated(), AuthorPermission()]
+            return [IsAuthenticatedBanned(), AuthorPermission()]
         raise MethodNotAllowed(f"Method {self.action} is not allowed")
 
     def get_queryset(self):
@@ -43,8 +43,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         is_in_shopping_cart = self.request.query_params.get('is_in_shopping_cart')
         if is_in_shopping_cart == "1" and not user.is_anonymous:
             queryset = queryset.filter(shoppingcart__author=user)
-
-        print(is_favorited, type(is_favorited), is_in_shopping_cart, type(is_in_shopping_cart))
 
         author_id = self.request.query_params.get('author')
         if author_id is not None:
@@ -71,7 +69,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
 
 class BaseRecipeActionView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
     model = None
     serializer_class = RecipeMinSerializer
     not_found_message = "Рецепт не найден."
@@ -104,7 +102,7 @@ class ShoppingCartView(BaseRecipeActionView):
 
 
 class DownloadShoppingCart(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedBanned]
 
     def get(self, request):
         author = self.request.user
