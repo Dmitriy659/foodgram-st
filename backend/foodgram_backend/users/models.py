@@ -35,7 +35,7 @@ class FoodgramUser(AbstractBaseUser, PermissionsMixin):
                                     regex=r"^[\w.@+-]+$",
                                     message="Username may contain only letters,"
                                             " digits and @/./+/-/_ characters.")])
-    avatar = models.ImageField(null=True, blank=True)
+    avatar = models.ImageField(null=True, blank=True, upload_to="avatars/")
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 

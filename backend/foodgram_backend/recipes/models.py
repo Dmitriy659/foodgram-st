@@ -21,7 +21,7 @@ class Recipe(models.Model):
         to=Ingredient,
         through="RecipeIngredient",
     )
-    image = models.ImageField(blank=False, null=False)
+    image = models.ImageField(blank=False, null=False, upload_to="recipes/")
 
     def __str__(self):
         return self.name
@@ -56,6 +56,8 @@ class Favourite(models.Model):
 
     class Meta:
         unique_together = ("author", "recipe")
+        verbose_name = "Избранное"
+        verbose_name_plural = "Избранное"
 
 
 class ShoppingCart(models.Model):
@@ -70,3 +72,5 @@ class ShoppingCart(models.Model):
 
     class Meta:
         unique_together = ("author", "recipe")
+        verbose_name = "Список покупок"
+        verbose_name_plural = "Список покупок"
