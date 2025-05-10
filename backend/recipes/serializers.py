@@ -2,7 +2,6 @@ from django.core.exceptions import ValidationError
 from django.db.transaction import atomic
 from drf_extra_fields.fields import Base64ImageField
 from ingredients.models import Ingredient
-from ingredients.serializers import IngredientSerializer
 from rest_framework.serializers import SerializerMethodField, ModelSerializer
 from users.serializers import FoodgramUserSerializer
 
@@ -24,7 +23,8 @@ class RecipeSerializer(ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            "id", "author", "ingredients", "is_favorited", "is_in_shopping_cart",
+            "id", "author", "ingredients", "is_favorited",
+            "is_in_shopping_cart",
             "name", "image", "text", "cooking_time",
         )
         read_only_fields = (
@@ -35,7 +35,8 @@ class RecipeSerializer(ModelSerializer):
         """
         Получает список ингридиентов для рецепта
         """
-        ingredients = RecipeIngredient.objects.filter(recipe=recipe).select_related("ingredient")
+        ingredients = (RecipeIngredient.objects.
+                       filter(recipe=recipe).select_related("ingredient"))
         return [
             {
                 "id": item.ingredient.id,
@@ -83,7 +84,7 @@ class RecipeSerializer(ModelSerializer):
             except Exception:
                 raise ValidationError("Amount должно быть число")
 
-        if not all(map(lambda x: x > 0, [ing["amount"] for ing in ingredients])):
+        if not all(map(lambda x: x > 0, [i["amount"] for i in ingredients])):
             raise ValidationError("Кол-во ингридиентов меньше 1")
         if "image" in data and not data["image"]:
             raise ValidationError("Нет изображения")

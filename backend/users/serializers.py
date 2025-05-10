@@ -27,7 +27,8 @@ class FoodgramUserSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user'):
             user = request.user
             if user.is_authenticated:
-                return Subscriber.objects.filter(publisher=obj, subscriber=user).exists()
+                return Subscriber.objects.filter(publisher=obj,
+                                                 subscriber=user).exists()
 
         return False
 
@@ -97,7 +98,8 @@ class SubscriptionsSerializer(serializers.ModelSerializer):
                 qs = qs[:int(limit)]
             except ValueError:
                 pass
-        return RecipeMinSerializer(qs, many=True, context={"request": request}).data
+        return RecipeMinSerializer(qs, many=True,
+                                   context={"request": request}).data
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()

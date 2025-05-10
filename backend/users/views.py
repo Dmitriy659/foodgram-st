@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from recipes.models import Recipe
 from rest_framework import viewsets, mixins, status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny
@@ -13,7 +12,8 @@ from rest_framework.views import APIView
 
 from .models import FoodgramUser, Subscriber
 from .serializers import (PasswordChangeSerializer, FoodgramUserSerializer,
-                          UserAvatarSerializer, FoodgramUserCreateSerializer, SubscriptionsSerializer)
+                          UserAvatarSerializer, FoodgramUserCreateSerializer,
+                          SubscriptionsSerializer)
 
 User = get_user_model()
 
@@ -101,8 +101,9 @@ class SubscriptionsView(APIView):
     def post(self, request, user_id):
         publisher = get_object_or_404(FoodgramUser, id=user_id)
 
-        if (request.user == publisher or
-                Subscriber.objects.filter(subscriber=request.user, publisher=publisher).exists()):
+        if (request.user == publisher or Subscriber.
+                objects.filter(subscriber=request.user,
+                               publisher=publisher).exists()):
             return Response(
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -119,7 +120,8 @@ class SubscriptionsView(APIView):
     def delete(self, request, user_id):
         publisher = get_object_or_404(FoodgramUser, id=user_id)
         subscriber = request.user
-        subscription = Subscriber.objects.filter(subscriber=subscriber, publisher=publisher)
+        subscription = Subscriber.objects.filter(subscriber=subscriber,
+                                                 publisher=publisher)
         if not subscription:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         subscription.delete()

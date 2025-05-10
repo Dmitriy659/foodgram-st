@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from .models import RecipeIngredient, Ingredient
 
+
 def set_ingredients(recipe, ingredients):
     """
     Создание связи между ингредиентами и рецептом

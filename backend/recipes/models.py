@@ -9,7 +9,9 @@ class Recipe(models.Model):
     """
     Модель рецепта
     """
-    author = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE, related_name="recipes")
+    author = models.ForeignKey(FoodgramUser,
+                               on_delete=models.CASCADE,
+                               related_name="recipes")
     name = models.CharField(max_length=256, blank=False, null=False)
     text = models.TextField(blank=False, null=False)
     cooking_time = models.IntegerField(blank=False, null=False,
@@ -36,9 +38,13 @@ class RecipeIngredient(models.Model):
     """
     Связь рецепт - ингредиенты
     """
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="recipe_ingredients")
+    recipe = models.ForeignKey(Recipe,
+                               on_delete=models.CASCADE,
+                               related_name="recipe_ingredients")
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    amount = models.IntegerField(null=False, blank=False, validators=[MinValueValidator(1)])
+    amount = models.IntegerField(null=False,
+                                 blank=False,
+                                 validators=[MinValueValidator(1)])
 
     class Meta:
         unique_together = ("recipe", "ingredient")

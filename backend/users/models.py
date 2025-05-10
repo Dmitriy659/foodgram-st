@@ -1,4 +1,5 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (AbstractBaseUser,
+                                        BaseUserManager, PermissionsMixin)
 from django.core.validators import RegexValidator
 from django.db import models
 
@@ -33,8 +34,7 @@ class FoodgramUser(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True, null=False,
                                 validators=[RegexValidator(
                                     regex=r"^[\w.@+-]+$",
-                                    message="Username may contain only letters,"
-                                            " digits and @/./+/-/_ characters.")])
+                                    message="Only letters/digits")])
     avatar = models.ImageField(null=True, blank=True, upload_to="avatars/")
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -60,8 +60,12 @@ class Subscriber(models.Model):
     """
     Модель для обозначения подписки между пользователями
     """
-    subscriber = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE, related_name="subscriber")
-    publisher = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE, related_name="publisher")
+    subscriber = models.ForeignKey(FoodgramUser,
+                                   on_delete=models.CASCADE,
+                                   related_name="subscriber")
+    publisher = models.ForeignKey(FoodgramUser,
+                                  on_delete=models.CASCADE,
+                                  related_name="publisher")
 
     def __str__(self):
         return f"{self.subscriber} подписан на {self.publisher}"

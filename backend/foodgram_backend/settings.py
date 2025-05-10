@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,14 +22,12 @@ CSRF_TRUSTED_ORIGINS = config(
 )
 
 if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS=True
+    CORS_ALLOW_ALL_ORIGINS = True
 else:
-    CORS_ALLOWED_ORIGINS  = config("CORS_ALLOWED_ORIGINS ", default=None, cast=Csv())
+    CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS ", default=None, cast=Csv())
 CORS_ALLOW_CREDENTIALS = True
 
-
 WSGI_APPLICATION = "foodgram_backend.wsgi.application"
-
 
 # Application definition
 
@@ -77,7 +76,6 @@ TEMPLATES = [
     },
 ]
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -101,7 +99,6 @@ else:
         }
     }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -120,7 +117,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -132,7 +128,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # USER-AUTH BLOCK
 
 AUTH_USER_MODEL = 'users.FoodgramUser'
@@ -142,8 +137,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_FILTER_BACKENDS': [
-            'django_filters.rest_framework.DjangoFilterBackend'
-        ],
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
 }
 
 DJOSER = {
@@ -154,7 +149,6 @@ DJOSER = {
         'current_user': 'users.serializers.FoodgramUserSerializer',
     }
 }
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

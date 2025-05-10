@@ -1,5 +1,3 @@
-import io
-
 import pyshorteners
 from django.http.response import HttpResponse
 
@@ -43,7 +41,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if is_favorited == "1" and not user.is_anonymous:
             queryset = queryset.filter(favourite__author=user)
 
-        is_in_shopping_cart = self.request.query_params.get("is_in_shopping_cart")
+        is_in_shopping_cart = (self.request.query_params.
+                               get("is_in_shopping_cart"))
         if is_in_shopping_cart == "1" and not user.is_anonymous:
             queryset = queryset.filter(shoppingcart__author=user)
 
@@ -53,7 +52,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    @action(detail=True, methods=["get"], url_path="get-link", url_name="get_link")
+    @action(detail=True, methods=["get"], url_path="get-link",
+            url_name="get_link")
     def get_link(self, request, pk=None):
         """
         Получение короткой ссылки на рецепт
@@ -81,15 +81,19 @@ class BaseRecipeActionView(APIView):
 
     def post(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
-        if self.model.objects.filter(author=request.user, recipe=recipe).exists():
+        if self.model.objects.filter(author=request.user,
+                                     recipe=recipe).exists():
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
         self.model.objects.create(author=request.user, recipe=recipe)
-        data = self.serializer_class(recipe, context={"request": request}).data
+        data = self.serializer_class(recipe,
+                                     context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
         recipe = get_object_or_404(Recipe, pk=recipe_id)
-        inst = self.model.objects.filter(author=request.user, recipe=recipe).first()
+        inst = self.model.objects.filter(author=request.user,
+                                         recipe=recipe).first()
         if not inst:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         inst.delete()
@@ -149,6 +153,8 @@ class DownloadShoppingCart(APIView):
             file_text.append(f"{ingredient}: {amount} {measure_unit}")
 
         file_text = "\n".join(file_text)
-        response = HttpResponse(file_text, content_type="text/plain; charset=utf-8")
-        response["Content-Disposition"] = "attachment; filename='shopping_list.txt'"
+        response = HttpResponse(file_text,
+                                content_type="text/plain; charset=utf-8")
+        response["Content-Disposition"] = ("attachment;"
+                                           " filename='shopping_list.txt'")
         return response

@@ -7,7 +7,8 @@ class IngredientFilter(django_filters.FilterSet):
     """
     Фильтр поиска ингредиентов
     """
-    name = django_filters.CharFilter(field_name="name", lookup_expr="icontains")
+    name = django_filters.CharFilter(field_name="name",
+                                     lookup_expr="icontains")
 
     class Meta:
         model = Ingredient
