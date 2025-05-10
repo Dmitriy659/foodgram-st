@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.core.validators import RegexValidator
+from django.db.models.fields.related import ManyToManyField
 
 
 class FoodgramUserManager(BaseUserManager):
@@ -24,12 +25,10 @@ class FoodgramUser(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=150, null=False)
     last_name = models.CharField(max_length=150, null=False)
     username = models.CharField(max_length=150, unique=True, null=False,
-                                validators=[
-                                    RegexValidator(
-                                        regex=r"^[\w.@+-]+$",
-                                        message="Username may contain only letters,"
-                                                " digits and @/./+/-/_ characters.")
-                                ])
+                                validators=[RegexValidator(
+                                    regex=r"^[\w.@+-]+$",
+                                    message="Username may contain only letters,"
+                                            " digits and @/./+/-/_ characters.")])
     avatar = models.ImageField(null=True, blank=True)
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -41,3 +40,14 @@ class FoodgramUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class Subscriber(models.Model):
+    subscriber = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE, related_name="subscriber")
+    publisher = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE, related_name="publisher")
+
+    def __str__(self):
+        return f"{self.subscriber} подписан на {self.publisher}"
+
+    class Meta:
+        unique_together = ("subscriber", "publisher")

@@ -1,13 +1,16 @@
 import io
 
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import MethodNotAllowed
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from .models import Recipe, Favourite, ShoppingCart, RecipeIngredient
-from .serializers import RecipeSerializer, FavouriteSerializer, ShoppingCartSerializer
 from .permissions import AuthorPermission
+from .serializers import RecipeSerializer
+from .base import RecipeMinSerializer
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -29,56 +32,34 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class BaseRecipeActionView(APIView):
     permission_classes = [IsAuthenticated]
     model = None
-    serializer_class = None
-    not_found_message = ""
+    serializer_class = RecipeMinSerializer
+    not_found_message = "Рецепт не найден."
 
     def post(self, request, recipe_id):
-        try:
-            recipe = Recipe.objects.get(pk=recipe_id)
-        except Recipe.DoesNotExist:
-            return Response(
-                {"detail": self.not_found_message},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
+        recipe = get_object_or_404(Recipe, pk=recipe_id)
         if self.model.objects.filter(author=request.user, recipe=recipe).exists():
-            return Response(
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        instance = self.model.objects.create(author=request.user, recipe=recipe)
-        serializer = self.serializer_class(instance, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        self.model.objects.create(author=request.user, recipe=recipe)
+        data = self.serializer_class(recipe, context={'request': request}).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
     def delete(self, request, recipe_id):
-        try:
-            recipe = Recipe.objects.get(pk=recipe_id)
-        except Recipe.DoesNotExist:
-            return Response(
-                {"detail": self.not_found_message},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        instance = self.model.objects.filter(author=request.user, recipe=recipe).first()
-        if not instance:
-            return Response(
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        instance.delete()
+        recipe = get_object_or_404(Recipe, pk=recipe_id)
+        inst = self.model.objects.filter(author=request.user, recipe=recipe).first()
+        if not inst:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        inst.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class FavouritesView(BaseRecipeActionView):
     model = Favourite
-    serializer_class = FavouriteSerializer
-    not_found_message = "Этого рецепта нет в избранных"
+    not_found_message = "Этого рецепта нет в избранном."
 
 
 class ShoppingCartView(BaseRecipeActionView):
     model = ShoppingCart
-    serializer_class = ShoppingCartSerializer
-    not_found_message = "Этого рецепта нет в списке покупок"
+    not_found_message = "Этого рецепта нет в корзине."
 
 
 class DownloadShoppingCart(APIView):

@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from .models import FoodgramUser
+from .models import FoodgramUser, Subscriber
 from .fields import Base64ImageField
+from recipes.models import Recipe
+from recipes.base import RecipeMinSerializer
 
 
 class FoodgramUserSerializer(serializers.ModelSerializer):
@@ -49,3 +51,34 @@ class UserAvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodgramUser
         fields = ("avatar",)
+
+
+class SubscriptionsSerializer(serializers.ModelSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
+    is_subscribed = serializers.SerializerMethodField()
+    avatar = serializers.ImageField(read_only=True)
+
+    class Meta:
+        model = FoodgramUser
+        fields = (
+            'id', 'username', 'email', 'first_name',
+            'last_name', 'is_subscribed', 'recipes', 'recipes_count', 'avatar'
+        )
+
+    def get_is_subscribed(self, obj):
+        return True
+
+    def get_recipes(self, obj):
+        request = self.context.get('request')
+        qs = obj.recipes.all()
+        limit = request.query_params.get('recipes_limit') if request else None
+        if limit:
+            try:
+                qs = qs[:int(limit)]
+            except ValueError:
+                pass
+        return RecipeMinSerializer(qs, many=True, context={'request': request}).data
+
+    def get_recipes_count(self, obj):
+        return obj.recipes.count()

@@ -3,11 +3,12 @@ from django.db.transaction import atomic
 from drf_extra_fields.fields import Base64ImageField
 from ingredients.models import Ingredient
 from ingredients.serializers import IngredientSerializer
-from rest_framework.serializers import SerializerMethodField, ModelSerializer, CharField, IntegerField
+from rest_framework.serializers import SerializerMethodField, ModelSerializer
 from users.serializers import FoodgramUserSerializer
 
 from .models import Recipe, RecipeIngredient, Favourite, ShoppingCart
 from .utils import set_ingredients
+from .base import RecipeMinSerializer
 
 
 class RecipeSerializer(ModelSerializer):
@@ -44,11 +45,11 @@ class RecipeSerializer(ModelSerializer):
 
     def get_is_favorited(self, recipe: Recipe) -> bool:
         """Проверка - находится ли рецепт в избранном."""
-        return False
+        return False  # TODO доделать
 
     def get_is_in_shopping_cart(self, recipe: Recipe) -> bool:
         """Проверка - находится ли рецепт в списке  покупок."""
-        return False
+        return False  # TODO доделать
 
     def validate(self, data):
         """Проверка вводных данных при создании/редактировании рецепта."""
@@ -97,29 +98,3 @@ class RecipeSerializer(ModelSerializer):
 
         recipe.save()
         return recipe
-
-
-class ShoppingFavouriteSerializer(ModelSerializer):
-    name = CharField(source="recipe.name", read_only=True)
-    image = SerializerMethodField()
-    cooking_time = IntegerField(source="recipe.cooking_time", read_only=True)
-
-    def get_image(self, obj):
-        request = self.context.get("request")
-        image_field = obj.recipe.image
-        if image_field:
-            return request.build_absolute_uri(image_field.url)
-        return None
-
-
-class FavouriteSerializer(ShoppingFavouriteSerializer):
-    class Meta:
-        model = Favourite
-        fields = ("id", "name", "image", "cooking_time")
-
-
-class ShoppingCartSerializer(ShoppingFavouriteSerializer):
-    class Meta:
-        model = ShoppingCart
-        fields = ("id", "name", "image", "cooking_time")
-
