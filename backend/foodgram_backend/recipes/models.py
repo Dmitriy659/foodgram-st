@@ -39,3 +39,14 @@ class Favourite(models.Model):
 
     class Meta:
         unique_together = ('author', 'recipe')
+
+
+class ShoppingCart(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    author = models.ForeignKey(FoodgramUser, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.author} - {self.recipe}"
+
+    class Meta:
+        unique_together = ('author', 'recipe')

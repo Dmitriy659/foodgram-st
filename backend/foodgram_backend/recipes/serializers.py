@@ -6,7 +6,7 @@ from ingredients.serializers import IngredientSerializer
 from rest_framework.serializers import SerializerMethodField, ModelSerializer, CharField, IntegerField
 from users.serializers import FoodgramUserSerializer
 
-from .models import Recipe, RecipeIngredient, Favourite
+from .models import Recipe, RecipeIngredient, Favourite, ShoppingCart
 from .utils import set_ingredients
 
 
@@ -99,14 +99,10 @@ class RecipeSerializer(ModelSerializer):
         return recipe
 
 
-class FavouriteSerializer(ModelSerializer):
+class ShoppingFavouriteSerializer(ModelSerializer):
     name = CharField(source="recipe.name", read_only=True)
     image = SerializerMethodField()
     cooking_time = IntegerField(source="recipe.cooking_time", read_only=True)
-
-    class Meta:
-        model = Favourite
-        fields = ("id", "name", "image", "cooking_time")
 
     def get_image(self, obj):
         request = self.context.get("request")
@@ -114,3 +110,16 @@ class FavouriteSerializer(ModelSerializer):
         if image_field:
             return request.build_absolute_uri(image_field.url)
         return None
+
+
+class FavouriteSerializer(ShoppingFavouriteSerializer):
+    class Meta:
+        model = Favourite
+        fields = ("id", "name", "image", "cooking_time")
+
+
+class ShoppingCartSerializer(ShoppingFavouriteSerializer):
+    class Meta:
+        model = ShoppingCart
+        fields = ("id", "name", "image", "cooking_time")
+
