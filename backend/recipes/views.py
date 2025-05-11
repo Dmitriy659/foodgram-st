@@ -34,7 +34,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         raise MethodNotAllowed(f"Method {self.action} is not allowed")
 
     def get_queryset(self):
-        queryset = Recipe.objects.all().order_by("-create_date")
+        queryset = Recipe.objects.all()
 
         is_favorited = self.request.query_params.get("is_favorited")
         user = self.request.user
@@ -49,6 +49,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         author_id = self.request.query_params.get("author")
         if author_id is not None:
             queryset = queryset.filter(author_id=author_id)
+
+        queryset = queryset.order_by("-create_date")
 
         return queryset
 

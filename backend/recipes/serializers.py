@@ -73,6 +73,9 @@ class RecipeSerializer(ModelSerializer):
 
         if not ingredients:
             raise ValidationError("Ингредиентов нет")
+        if Recipe.objects.filter(author=self.context["request"].user,
+                                 name=data["name"]).exists():
+            raise ValidationError("Рецепт у автора уже существует")
 
         ing_ids = [ing["id"] for ing in ingredients]
         cnt = Ingredient.objects.filter(id__in=ing_ids).count()
