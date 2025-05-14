@@ -1,6 +1,6 @@
 import django_filters
 
-from .models import Ingredient
+from recipes.models import Ingredient
 
 
 class IngredientFilter(django_filters.FilterSet):
@@ -8,7 +8,7 @@ class IngredientFilter(django_filters.FilterSet):
     Фильтр поиска ингредиентов
     """
     name = django_filters.CharFilter(field_name="name",
-                                     lookup_expr="icontains")
+                                     lookup_expr="istartswith")
 
     class Meta:
         model = Ingredient

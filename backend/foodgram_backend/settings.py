@@ -10,7 +10,7 @@ DATE_TIME_FORMAT = "%d/%m/%Y %H:%M"
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config("SECRET_KEY")
+SECRET_KEY = config("SECRET_KEY", default="insecure-development-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
@@ -38,14 +38,13 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "recipes.apps.RecipesConfig",
+    "api.apps.ApiConfig",
     "rest_framework",
     "rest_framework.authtoken",
     "djoser",
     "corsheaders",
     'django_extensions',
-    "users.apps.UsersConfig",
-    "ingredients.apps.IngredientsConfig",
-    "recipes.apps.RecipesConfig",
 ]
 
 MIDDLEWARE = [
@@ -122,7 +121,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "RU-ru"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -130,7 +129,7 @@ USE_TZ = True
 
 # USER-AUTH BLOCK
 
-AUTH_USER_MODEL = 'users.FoodgramUser'
+AUTH_USER_MODEL = 'recipes.FoodgramUser'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -139,15 +138,24 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend'
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+            'rest_framework.permissions.AllowAny',
+        ],
 }
 
 DJOSER = {
-    'LOGIN_FIELD': 'email',
-    'USER_CREATE_PASSWORD_RETYPE': False,
-    'SERIALIZERS': {
-        'user': 'users.serializers.FoodgramUserSerializer',
-        'current_user': 'users.serializers.FoodgramUserSerializer',
-    }
+    "LOGIN_FIELD": "email",
+    "HIDE_USERS": False,
+    "PERMISSIONS": {
+        "user": ('djoser.permissions.CurrentUserOrAdminOrReadOnly',),
+        "user_list": ('rest_framework.permissions.IsAuthenticatedOrReadOnly',),
+    },
+    "SERIALIZERS": {
+        "user": "api.serializers.FoodgramUserSerializer",
+        "user_list": "api.serializers.FoodgramUserSerializer",
+        "current_user": "api.serializers.FoodgramUserSerializer",
+        "user_create": "api.serializers.FoodgramUserSerializer",
+    },
 }
 
 # Static files (CSS, JavaScript, Images)
