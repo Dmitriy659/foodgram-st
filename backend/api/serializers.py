@@ -1,11 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db.transaction import atomic
-from django.forms.fields import CharField
-from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework.serializers import SerializerMethodField, ModelSerializer, IntegerField, ReadOnlyField, PrimaryKeyRelatedField
-
 from recipes.models import Recipe, Ingredient, Favourite, ShoppingCart, RecipeIngredient, FoodgramUser, Subscriber
+from djoser.serializers import UserSerializer as DjoserUserSerializer
 
 
 class RecipeMinSerializer(ModelSerializer):
@@ -29,8 +27,8 @@ class IngredientSerializer(ModelSerializer):
         fields = "__all__"
 
 
-class IngredientAmountSerializer(ModelSerializer):
-    id = ReadOnlyField(source='ingredient.id')
+class RecipeIngredientSerializer(ModelSerializer):
+    id = PrimaryKeyRelatedField(source="ingredient", queryset=Ingredient.objects.all())
     name = ReadOnlyField(source='ingredient.name')
     measurement_unit = ReadOnlyField(
         source='ingredient.measurement_unit'
@@ -39,13 +37,10 @@ class IngredientAmountSerializer(ModelSerializer):
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'name', 'measurement_unit', 'amount')
-        validators = [
-
-        ]
 
 
 
-class FoodgramUserSerializer(ModelSerializer):
+class FoodgramUserSerializer(DjoserUserSerializer):
     """
     Сериализатор для получения данных о пользователях
     """
@@ -78,7 +73,7 @@ class RecipeSerializer(ModelSerializer):
     """
 
     author = FoodgramUserSerializer(read_only=True)
-    ingredients = IngredientAmountSerializer(source="recipe_ingredients", many=True, read_only=True)
+    ingredients = RecipeIngredientSerializer(source="recipe_ingredients", many=True, read_only=True)
     is_favorited = SerializerMethodField()
     is_in_shopping_cart = SerializerMethodField()
     image = Base64ImageField()
@@ -121,6 +116,12 @@ class RecipeSerializer(ModelSerializer):
             raise ValidationError("Ингредиентов нет")
         if "image" in data and not data["image"]:
             raise ValidationError("Нет изображения")
+        if len(ingredients) != len(set(item["id"] for item in ingredients)):
+            raise ValidationError("Ингредиенты должны быть уникальными")
+        if not all((int(item["amount"]) > 0 for item in ingredients)):
+            raise ValidationError("Кол-во должно быть больше 0")
+        if not all((Ingredient.objects.filter(pk=item["id"]).exists() for item in ingredients)):
+            raise ValidationError("Такого рецепта не существует")
 
         data['ingredients'] = ingredients
         return data
@@ -153,7 +154,7 @@ class RecipeSerializer(ModelSerializer):
         recipe_ingredients = [
             RecipeIngredient(
                 recipe=recipe,
-                ingredient=get_object_or_404(Ingredient, pk=item["id"]),  # <-- исправлено здесь (предполагая, что данные приходят с ключом 'id')
+                ingredient=Ingredient.objects.get(pk=item["id"]),
                 amount=item["amount"],
             )
             for item in ingredients_data

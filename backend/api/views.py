@@ -13,7 +13,8 @@ from djoser.views import UserViewSet as DjoserUserViewSet
 
 from .filters import IngredientFilter
 from .permissions import AuthorPermission
-from .serializers import IngredientSerializer, RecipeSerializer, RecipeMinSerializer, FoodgramUserSerializer, UserAvatarSerializer
+from .serializers import IngredientSerializer, RecipeSerializer, RecipeMinSerializer, FoodgramUserSerializer, \
+    UserAvatarSerializer, SubscriptionUserSerializer
 from .paginators import ApiPagination
 
 from recipes.models import Ingredient, Recipe, Favourite, ShoppingCart, RecipeIngredient, FoodgramUser, Subscriber
@@ -38,7 +39,7 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
     serializer_class = RecipeSerializer
 
     def get_permissions(self):
-        if self.action in ("create",):
+        if self.action in ("create", "shopping_cart", "favorite", "download_shopping_cart"):  # TODO проверить правльность ограничений по ТЗ
             return [IsAuthenticated()]
         elif self.action in ("list", "retrieve", "get_link"):
             return [AllowAny()]
@@ -52,12 +53,12 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
         is_favorited = self.request.query_params.get("is_favorited")
         user = self.request.user
         if is_favorited == "1" and not user.is_anonymous:
-            queryset = queryset.filter(favourite__author=user)
+            queryset = queryset.filter(favourites__author=user)
 
         is_in_shopping_cart = (self.request.query_params.
                                get("is_in_shopping_cart"))
         if is_in_shopping_cart == "1" and not user.is_anonymous:
-            queryset = queryset.filter(shoppingcart__author=user)
+            queryset = queryset.filter(shoppingcarts__author=user)
 
         author_id = self.request.query_params.get("author")
         if author_id is not None:
@@ -75,8 +76,10 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
                 return Response({"detail": "Рецепт уже в избранном"}, status=400)
             data = RecipeMinSerializer(recipe, context={"request": request}).data
             return Response(data, status=201)
-
-        Favourite.objects.filter(author=request.user, recipe=recipe).delete()
+        """
+        В ревью было написано использовать get_object_or_404, но по тестам в postman должен возвращаться статус 400
+        """
+        get_object_or_404(Favourite, author=request.user, recipe=recipe).delete()
         return Response(status=204)
 
     @action(detail=True, methods=["post", "delete"], url_path="shopping_cart")
@@ -90,7 +93,10 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
             data = RecipeMinSerializer(recipe, context={"request": request}).data
             return Response(data, status=201)
 
-        ShoppingCart.objects.filter(author=request.user, recipe=recipe).delete()
+        """
+        Здесь ситуация такая же как в favourites
+        """
+        get_object_or_404(ShoppingCart, author=request.user, recipe=recipe).delete()
         return Response(status=204)
 
     @action(detail=False, methods=["get"], url_path="download_shopping_cart")
@@ -132,7 +138,7 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
         buffer.seek(0)
 
         response = FileResponse(
-            content=buffer,
+            buffer,
             as_attachment=True,
             filename="shopping_list.txt",
             content_type="text/plain; charset=utf-8"
@@ -151,8 +157,6 @@ class UserViewSet(DjoserUserViewSet):
     """
 
     pagination_class = ApiPagination
-    permission_classes = (DjangoModelPermissions,)  # Djoser сам переключает на IsAuthenticated там, где нужно
-    serializer_class = FoodgramUserSerializer
 
     @action(detail=False, methods=['put'], permission_classes=[IsAuthenticated], url_path='me/avatar')
     def avatar(self, request):
@@ -178,16 +182,19 @@ class UserViewSet(DjoserUserViewSet):
         subscriber = request.user
 
         if request.method == 'POST':
+            if publisher == subscriber:
+                return Response({'detail': 'Нельзя подписаться на себя'}, status=status.HTTP_400_BAD_REQUEST)
             obj, created = Subscriber.objects.get_or_create(subscriber=subscriber, publisher=publisher)
             if not created:
                 return Response({'detail': 'Вы уже подписаны'}, status=status.HTTP_400_BAD_REQUEST)
-            data = self.get_serializer(publisher, context={'request': request}).data
+            data = SubscriptionUserSerializer(publisher, context={'request': request}).data
             return Response(data, status=status.HTTP_201_CREATED)
 
         # DELETE
-        count, _ = Subscriber.objects.filter(subscriber=subscriber, publisher=publisher).delete()
-        if count == 0:
-            return Response({'detail': 'Подписка не найдена'}, status=status.HTTP_400_BAD_REQUEST)
+        """
+        Здесь опять ситуация такая же
+        """
+        get_object_or_404(Subscriber, subscriber=subscriber, publisher=publisher).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated], url_path='subscriptions')
@@ -196,5 +203,5 @@ class UserViewSet(DjoserUserViewSet):
         publisher_ids = Subscriber.objects.filter(subscriber=request.user).values_list('publisher_id', flat=True)
         qs = FoodgramUser.objects.filter(id__in=publisher_ids)
         page = self.paginate_queryset(qs)
-        serializer = self.get_serializer(page or qs, many=True, context={'request': request})
+        serializer = SubscriptionUserSerializer(page or qs, many=True, context={'request': request})
         return self.get_paginated_response(serializer.data)
