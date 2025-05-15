@@ -9,7 +9,7 @@ class AuthorPermission(BasePermission):
         return obj.author == request.user
 
 
-class IsAuthenticatedForMeOtherwiseAllowAny(BasePermission):
+class UserDataPermission(BasePermission):
     def has_permission(self, request, view):
         if view.action == "me":
             return request.user and request.user.is_authenticated

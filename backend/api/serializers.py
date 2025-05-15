@@ -54,7 +54,7 @@ class FoodgramUserSerializer(DjoserUserSerializer):
             "first_name", "last_name",
             "is_subscribed", "avatar",
         )
-        read_only_fields = ("is_subscribed",)
+        read_only_fields = ("is_subscribed", "avatar")
 
     def get_is_subscribed(self, viewed_user):
         request = self.context.get("request")
