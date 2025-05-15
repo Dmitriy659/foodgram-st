@@ -1,3 +1,4 @@
+import base64
 from io import BytesIO
 
 from django.http.response import FileResponse
@@ -5,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
-from rest_framework.permissions import AllowAny, IsAuthenticated, DjangoModelPermissions
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -13,8 +14,7 @@ from djoser.views import UserViewSet as DjoserUserViewSet
 
 from .filters import IngredientFilter
 from .permissions import AuthorPermission
-from .serializers import IngredientSerializer, RecipeSerializer, RecipeMinSerializer, FoodgramUserSerializer, \
-    UserAvatarSerializer, SubscriptionUserSerializer
+from .serializers import IngredientSerializer, RecipeSerializer, RecipeMinSerializer, UserAvatarSerializer, SubscriptionUserSerializer
 from .paginators import ApiPagination
 
 from recipes.models import Ingredient, Recipe, Favourite, ShoppingCart, RecipeIngredient, FoodgramUser, Subscriber
@@ -31,7 +31,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = IngredientFilter
 
 
-class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТКИЕ ССЫЛКИ
+class RecipeViewSet(viewsets.ModelViewSet):
     """
     Класс для управления рецептами
     """
@@ -73,14 +73,14 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
         if request.method == "POST":
             obj, created = Favourite.objects.get_or_create(author=request.user, recipe=recipe)
             if not created:
-                return Response({"detail": "Рецепт уже в избранном"}, status=400)
+                return Response({"detail": "Рецепт уже в избранном"}, status=status.HTTP_400_BAD_REQUEST)
             data = RecipeMinSerializer(recipe, context={"request": request}).data
-            return Response(data, status=201)
+            return Response(data, status=status.HTTP_201_CREATED)
         """
         В ревью было написано использовать get_object_or_404, но по тестам в postman должен возвращаться статус 400
         """
         get_object_or_404(Favourite, author=request.user, recipe=recipe).delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post", "delete"], url_path="shopping_cart")
     def shopping_cart(self, request, pk=None):
@@ -89,15 +89,15 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
         if request.method == "POST":
             obj, created = ShoppingCart.objects.get_or_create(author=request.user, recipe=recipe)
             if not created:
-                return Response({"error": "Рецепт уже в корзине"}, status=400)
+                return Response({"error": "Рецепт уже в корзине"}, status=status.HTTP_400_BAD_REQUEST)
             data = RecipeMinSerializer(recipe, context={"request": request}).data
-            return Response(data, status=201)
+            return Response(data, status=status.HTTP_201_CREATED)
 
         """
         Здесь ситуация такая же как в favourites
         """
         get_object_or_404(ShoppingCart, author=request.user, recipe=recipe).delete()
-        return Response(status=204)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"], url_path="download_shopping_cart")
     def download_shopping_cart(self, request):
@@ -144,6 +144,15 @@ class RecipeViewSet(viewsets.ModelViewSet):  # TODO ДОБАВИТЬ КОРОТ�
             content_type="text/plain; charset=utf-8"
         )
         return response
+
+    @action(["get"], detail=True, url_path='get-link')
+    def get_link(self, request, pk):
+        """Создание короткой ссылки через хэширование id"""
+        recipe = get_object_or_404(Recipe, pk=pk)
+        encoded_id = base64.urlsafe_b64encode(str(recipe.id).encode()).decode().rstrip("=")
+        base_url = request.build_absolute_uri('/').rstrip('/')
+        return Response({"short-link": f"{base_url}/s/{encoded_id}"},
+                        status=status.HTTP_200_OK)
 
 
 class UserViewSet(DjoserUserViewSet):
