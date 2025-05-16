@@ -10,7 +10,7 @@ DATE_TIME_FORMAT = "%d/%m/%Y %H:%M"
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config("SECRET_KEY", default="insecure-development-key")
+SECRET_KEY = config("SECRET_KEY", default="development-key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)

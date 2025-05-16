@@ -117,15 +117,15 @@ class RecipeSerializer(ModelSerializer):
         Проверка вводных данных при создании/редактировании рецепта
         """
         ingredients = self.initial_data.get("ingredients")
-        if not ingredients:
-            raise ValidationError("Ингредиентов нет")
-        if "image" in data and not data["image"]:
+        if not data["image"]:
             raise ValidationError("Нет изображения")
+        if (not ingredients
+                or not all((int(item["amount"]) > 0 for item in ingredients))):
+            raise ValidationError("Неверные данные игредиентов")
         if len(ingredients) != len(set(item["id"] for item in ingredients)):
             raise ValidationError("Ингредиенты должны быть уникальными")
-        if not all((int(item["amount"]) > 0 for item in ingredients)):
-            raise ValidationError("Кол-во должно быть больше 0")
-        if not all((Ingredient.objects.filter(pk=item["id"]).exists() for item in ingredients)):
+        if not all((Ingredient.objects.filter(pk=item["id"]).exists()
+                    for item in ingredients)):
             raise ValidationError("Такого рецепта не существует")
 
         data["ingredients"] = ingredients
@@ -171,7 +171,7 @@ class UserAvatarSerializer(ModelSerializer):
     """
     Сериализатор для управления аватарками
     """
-    avatar = Base64ImageField(required=True)
+    avatar = Base64ImageField()
 
     class Meta:
         model = FoodgramUser

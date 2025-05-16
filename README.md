@@ -1,39 +1,39 @@
 # Foodgram
 
-## 🛠️ Использующиеся технологии
+## Technologies used
 
 - **Backend**: Python, Django, Django REST Framework (DRF), Gunicorn  
 - **Frontend**: React  
 - **Web-сервер**: Nginx  
-- **Контейнеризация**: Docker
+- **Containerization**: Docker
 
 ---
 
-## Подготовка перед запуском проекта
+## Preparation before the project launch
 
-Перед запуском проекта необходимо создать файл `.env` и ввести данные для работы проекта.  
-Шаблон можно посмотреть в файле `.env_template`.
+Before starting the project, you need to create a `.env` file and enter the data for the project.  
+The template can be viewed in the `.env_template` file.
 
 ---
 
-## Запуск проекта локально
+## Launching the project locally
 
-### 1. Клонирование репозитория
+### 1. Cloning a repository
 
 ```bash
 git clone https://github.com/Dmitriy659/foodgram-st.git
 ```
 
-### 2. Установка Docker, Docker-compose
+### 2. Installing Docker, Docker-compose
 ```bash
 sudo apt update
-sudo apt install curl                                   # установка утилиты для скачивания файлов
-curl -fsSL https://get.docker.com -o get-docker.sh      # скачать скрипт для установки
-sh get-docker.sh                                        # запуск скрипта
+sudo apt install curl                                   # installing the file download utility
+curl -fsSL https://get.docker.com -o get-docker.sh      # download the installation script
+sh get-docker.sh                                        # running the script
 sudo apt-get install docker-compose-plugin
 ```
-### 3. Создать образы и контейнеры, испоьзуя команду ниже в директории infra
+### 3. Create images and containers using the command below in the infra directory
 ```bash
 docker compose up
 ```
-При создании контейнера foodgram-backend будет запущен скрипт run_server.sh, который применит все необходимые миграции, а также загрузит в таблицу ингредиенты, если их там нет
+When creating the foodgram-backend container, the script will be run run_server.sh , which will apply all the necessary migrations, as well as load the ingredients into the table if they are not there.

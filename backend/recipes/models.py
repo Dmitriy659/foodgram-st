@@ -82,10 +82,6 @@ class Recipe(models.Model):
         validators=[MinValueValidator(1)],
         verbose_name="Время приготовления (мин)"
     )
-    create_date = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Дата создания"
-    )
     ingredients = models.ManyToManyField(
         to="Ingredient",
         through="RecipeIngredient",
@@ -109,7 +105,7 @@ class Recipe(models.Model):
                 name="unique_recipe_per_author"
             )
         ]
-        ordering = ("-create_date",)
+        ordering = ("-id",)  # сначала новые рецепты
 
 
 class RecipeIngredient(models.Model):

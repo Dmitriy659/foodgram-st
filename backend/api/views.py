@@ -84,17 +84,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             data = RecipeMinSerializer(recipe,
                                        context={"request": request}).data
             return Response(data, status=status.HTTP_201_CREATED)
-        """
-        Здесь в тестах postman ожидается статус 400 и
-        в документации тоже написано 400, поэтому я не использовал
-        get_object_or_404
-        """
-        fav = Favourite.objects.filter(author=request.user,
-                                       recipe=recipe)
-        if not fav:
-            return Response({"detail": "Рецепта в избранном не было"},
-                            status=status.HTTP_400_BAD_REQUEST)
-        fav.delete()
+
+        get_object_or_404(Favourite, author=request.user,
+                          recipe=recipe).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post", "delete"], url_path="shopping_cart")
@@ -111,15 +103,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                        context={"request": request}).data
             return Response(data, status=status.HTTP_201_CREATED)
 
-        """
-        Здесь ситуация такая же как в favourites
-        """
-        recipe_cart = (ShoppingCart.objects.
-                       filter(author=request.user, recipe=recipe))
-        if not recipe_cart:
-            return Response({"detail": "Рецепта в списке покупок не было"},
-                            status=status.HTTP_400_BAD_REQUEST)
-        recipe_cart.delete()
+        get_object_or_404(ShoppingCart, author=request.user,
+                          recipe=recipe).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"], url_path="download_shopping_cart")
@@ -221,15 +206,8 @@ class UserViewSet(DjoserUserViewSet):
                                      context={"request": request}).data
             return Response(data, status=status.HTTP_201_CREATED)
 
-        """
-        Здесь опять ситуация такая же
-        """
-        subscribe = Subscriber.objects.filter(subscriber=subscriber,
-                                              publisher=publisher)
-        if not subscribe:
-            return Response({"detail": "Подписки не было"},
-                            status=status.HTTP_400_BAD_REQUEST)
-        subscribe.delete()
+        get_object_or_404(Subscriber, subscriber=subscriber,
+                          publisher=publisher).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"],
