@@ -5,6 +5,9 @@ from django.db.models.constraints import UniqueConstraint
 
 
 class Ingredient(models.Model):
+    """
+    Модель ингредиента
+    """
     name = models.CharField(max_length=128,
                             verbose_name="Название")
     measurement_unit = models.CharField(max_length=64,
@@ -20,7 +23,7 @@ class Ingredient(models.Model):
                 name="unique_ingredient_name"
             )
         ]
-        ordering = ('name',)
+        ordering = ("name",)
         verbose_name = "Ингредиент"
         verbose_name_plural = "Ингредиенты"
 
@@ -52,7 +55,7 @@ class FoodgramUser(AbstractUser):
         return self.email
 
     class Meta:
-        ordering = ('email',)
+        ordering = ("email",)
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
@@ -136,17 +139,17 @@ class RecipeIngredient(models.Model):
 
 class BaseUserRecipeRelation(models.Model):
     """
-    Абстрактная модель для связи пользователя и рецепта (Избранное, Список покупок).
+    Абстрактная модель для связи пользователя и рецепта
     """
 
     author = models.ForeignKey(
-        "FoodgramUser",
+        FoodgramUser,
         on_delete=models.CASCADE,
         verbose_name="Пользователь",
         related_name="%(class)ss"
     )
     recipe = models.ForeignKey(
-        "Recipe",
+        Recipe,
         on_delete=models.CASCADE,
         verbose_name="Рецепт",
         related_name="%(class)ss"

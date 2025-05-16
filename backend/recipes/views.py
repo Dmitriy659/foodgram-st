@@ -9,8 +9,8 @@ from .models import Recipe
 
 def redirect_shorturl(request, short_link):
     """Перенаправление с короткой ссылки"""
-    if request.method != 'GET':
-        return HttpResponseNotAllowed(['GET'])
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
 
     try:
         padded = short_link + "=" * (-len(short_link) % 4)
@@ -19,5 +19,5 @@ def redirect_shorturl(request, short_link):
         return HttpResponseRedirect(request.build_absolute_uri(
             reverse("api:recipes-detail", args=[recipe.pk])
         ))
-    except Exception as e:
-        return HttpResponseRedirect('/')
+    except Exception:
+        return HttpResponseRedirect("/")  # TODO поменять

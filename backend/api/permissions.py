@@ -10,6 +10,9 @@ class AuthorPermission(BasePermission):
 
 
 class UserDataPermission(BasePermission):
+    """
+    Права на получение данных юзера
+    """
     def has_permission(self, request, view):
         if view.action == "me":
             return request.user and request.user.is_authenticated
@@ -17,4 +20,5 @@ class UserDataPermission(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         cur_user = request.user
-        return request.method in SAFE_METHODS or cur_user.is_authenticated and cur_user == obj
+        return (request.method in SAFE_METHODS
+                or cur_user.is_authenticated and cur_user == obj)

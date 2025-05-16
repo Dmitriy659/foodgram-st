@@ -1,4 +1,5 @@
 import csv
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -12,10 +13,11 @@ class Command(BaseCommand):
         try:
             if Ingredient.objects.exists():
                 self.stdout.write(self.style.WARNING(
-                'Ingredients already exist'
-            ))
+                    'Ingredients already exist'
+                ))
                 return
-            with open("../data/ingredients.csv", 'r', encoding='utf-8') as csv_file:
+            with open("data/ingredients.csv", 'r',
+                      encoding='utf-8') as csv_file:
                 reader = csv.reader(csv_file)
                 with transaction.atomic():
                     ingrs = [
@@ -28,7 +30,7 @@ class Command(BaseCommand):
                     Ingredient.objects.bulk_create(ingrs)
 
                     self.stdout.write(self.style.SUCCESS(
-                        f'Ingredients were imported'
+                        'Ingredients were imported'
                     ))
         except Exception as e:
             self.stdout.write(self.style.ERROR(
