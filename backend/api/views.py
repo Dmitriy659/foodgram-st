@@ -68,9 +68,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def _handle_post_delete_action(self, request, model, recipe, error_message):
+    def _handle_post_delete_action(self, request, model, recipe,
+                                   error_message):
         if request.method == "DELETE":
-            get_object_or_404(model, author=request.user, recipe=recipe).delete()
+            get_object_or_404(model, author=request.user,
+                              recipe=recipe).delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         obj, created = model.objects.get_or_create(
@@ -83,7 +85,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
         data = RecipeMinSerializer(recipe, context={"request": request}).data
         return Response(data, status=status.HTTP_201_CREATED)
-
 
     @action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, pk=None):
@@ -156,7 +157,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_link(self, request, pk):
         """Создание короткой ссылки"""
         return Response({"short-link": f"{request.build_absolute_uri('/')}s/"
-                                       f"{get_object_or_404(Recipe, pk=pk).id}"},
+                                       f"{get_object_or_404(Recipe,
+                                                            pk=pk).id}"},
                         status=status.HTTP_200_OK)
 
 

@@ -92,6 +92,10 @@ class Recipe(models.Model):
         upload_to="recipes/",
         verbose_name="Изображение"
     )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Дата создания"
+    )
 
     def __str__(self):
         return self.name
@@ -105,7 +109,7 @@ class Recipe(models.Model):
                 name="unique_recipe_per_author"
             )
         ]
-        ordering = ("-id",)  # от новых
+        ordering = ("-created_at",)  # от новых
 
 
 class RecipeIngredient(models.Model):
@@ -123,6 +127,10 @@ class RecipeIngredient(models.Model):
     amount = models.IntegerField(verbose_name="Количество",
                                  validators=[MinValueValidator(1)],
                                  )
+
+    def __str__(self):
+        return (f"{self.recipe.name} - {self.ingredient.name} -"
+                f" {self.amount} - {self.ingredient.measurement_unit}")
 
     class Meta:
         constraints = [

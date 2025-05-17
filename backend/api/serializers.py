@@ -109,9 +109,9 @@ class RecipeSerializer(ModelSerializer):
         )
 
     def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        ret["ingredients"] = ret.pop("ingredients_data")
-        return ret
+        res = super().to_representation(instance)
+        res["ingredients"] = res.pop("ingredients_data")
+        return res
 
     def get_is_favorited(self, recipe: Recipe) -> bool:
         """

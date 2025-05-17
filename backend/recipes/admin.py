@@ -3,7 +3,7 @@ from django.contrib.admin.filters import SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
 from django.utils.safestring import mark_safe
 
-from .models import (Recipe, RecipeIngredient,
+from .models import (Recipe,
                      Favourite, ShoppingCart,
                      Ingredient, Subscriber, FoodgramUser)
 
@@ -38,7 +38,8 @@ class CookingTimeFilter(SimpleListFilter):
 
         return [
             ("fast", f"быстро (< {self.n} мин) ({count_in_range(0, self.n)})"),
-            ("medium", f"средне (от {self.n} до {self.m} мин) ({count_in_range(self.n, self.m)})"),
+            ("medium", f"средне (от {self.n} до {self.m} мин)"
+                       f" ({count_in_range(self.n, self.m)})"),
             ("slow", f"долго (≥ {self.m} мин) ({count_in_range(self.m)})"),
         ]
 
@@ -56,93 +57,74 @@ class CookingTimeFilter(SimpleListFilter):
         return queryset
 
 
-class HasRecipesFilter(SimpleListFilter):
-    """
-    Фильтр по пользовтелям, есть ли рецепты
-    """
+class HasRelationFilter(SimpleListFilter):
+    """Базовый фильтр: наличие связанного объекта"""
+
+    LOOKUP_CHOICES = [
+        ("yes", "Есть"),
+        ("no", "Нет"),
+    ]
+
+    related_field = None  # задаётся в наследниках
+
+    def lookups(self, request, model_admin):
+        return self.LOOKUP_CHOICES
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == "yes":
+            return queryset.filter(
+                **{f"{self.related_field}__isnull": False}).distinct()
+        elif value == "no":
+            return queryset.filter(
+                **{f"{self.related_field}__isnull": True}).distinct()
+        return queryset
+
+
+class HasRecipesFilter(HasRelationFilter):
+    """Фильтр есть ли рецепты"""
+
     title = "Есть рецепты"
     parameter_name = "has_recipes"
-
-    def lookups(self, request, model_admin):
-        return [
-            ("yes", "Есть"),
-            ("no", "Нет"),
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value() == "yes":
-            return queryset.filter(recipes__isnull=False).distinct()
-        if self.value() == "no":
-            return queryset.filter(recipes__isnull=True).distinct()
-        return queryset
+    related_field = "recipes"
 
 
-class HasSubscriptionsFilter(SimpleListFilter):
-    """
-    Фильтр по пользовтелям, есть ли подписки
-    """
+class HasSubscriptionsFilter(HasRelationFilter):
+    """Фильтр есть ли подписки"""
+
     title = "Есть подписки"
     parameter_name = "has_subscriptions"
-
-    def lookups(self, request, model_admin):
-        return [
-            ("yes", "Есть"),
-            ("no", "Нет"),
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value() == "yes":
-            return queryset.filter(publishers__isnull=False).distinct()
-        if self.value() == "no":
-            return queryset.filter(publishers__isnull=True).distinct()
-        return queryset
+    related_field = "publishers"
 
 
-class HasSubscribersFilter(SimpleListFilter):
-    """
-    Фильтр по пользовтелям, есть ли подписчики
-    """
+class HasSubscribersFilter(HasRelationFilter):
+    """Фильтр есть ли подписчики"""
+
     title = "Есть подписчики"
     parameter_name = "has_subscribers"
-
-    def lookups(self, request, model_admin):
-        return [
-            ("yes", "Есть"),
-            ("no", "Нет"),
-        ]
-
-    def queryset(self, request, queryset):
-        if self.value() == "yes":
-            return queryset.filter(subscribers__isnull=False).distinct()
-        if self.value() == "no":
-            return queryset.filter(subscribers__isnull=True).distinct()
-        return queryset
-
-
-class RecipeIngredientInline(admin.TabularInline):
-    model = RecipeIngredient
-    extra = 1
+    related_field = "subscribers"
 
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "cooking_time", "author",
-                    "favorites_count", "ingredients", "image")
+                    "favorites_count", "formatted_ingredients", "image")
     search_fields = ("name", "author__username")
     list_filter = ("author",
                    CookingTimeFilter)
-    inlines = [RecipeIngredientInline]
 
     @admin.display(description="В избранном")
     def favorites_count(self, recipe):
         return recipe.favourites.count()
 
     @admin.display(description="Продукты")
-    def ingredients(self, recipe):
-        ingredients = recipe.ingredients.all()
-        return mark_safe("<br>".join(
-            f"{ing.name} ({ing.measurement_unit})" for ing in ingredients
-        ))
+    def formatted_ingredients(self, recipe):
+        return mark_safe("<br>".join([
+            f"{ri.ingredient.name} - {ri.amount}"
+            f" {ri.ingredient.measurement_unit}"
+            for ri in recipe.recipe_ingredients.select_related(
+                "ingredient").all()
+        ]))
 
     @admin.display(description="Картинка")
     def image(self, recipe):
@@ -229,29 +211,17 @@ class FoodgramUserAdmin(UserAdmin):
                              f' width="50" height="50"" />')
         return "-"
 
-    @admin.display(description="Число рецептов")
+    @admin.display(description="Рецепты")
     def recipes_count(self, user):
         return Recipe.objects.filter(author=user).count()
 
-    @admin.display(description="Число подписок")
+    @admin.display(description="Подписчики")
     def subscriptions_count(self, user):
         return Subscriber.objects.filter(subscriber=user).count()
 
-    @admin.display(description="Число подписчиков")
+    @admin.display(description="Подписки")
     def subscribers_count(self, user):
         return Subscriber.objects.filter(publisher=user).count()
-
-    @admin.display(boolean=True, description="Есть рецепты")
-    def has_recipes(self, user):
-        return Recipe.objects.filter(author=user).exists()
-
-    @admin.display(boolean=True, description="Есть подписки")
-    def has_subscriptions(self, user):
-        return Subscriber.objects.filter(subscriber=user).exists()
-
-    @admin.display(boolean=True, description="Есть подписчики")
-    def has_subscribers(self, user):
-        return Subscriber.objects.filter(publisher=user).exists()
 
 
 @admin.register(Subscriber)
