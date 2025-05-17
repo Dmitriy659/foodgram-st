@@ -32,9 +32,19 @@ class IngredientSerializer(ModelSerializer):
         fields = "__all__"
 
 
-class RecipeIngredientSerializer(ModelSerializer):
-    id = PrimaryKeyRelatedField(source="ingredient",
-                                queryset=Ingredient.objects.all())
+class RecipeIngredientCreateSerializer(ModelSerializer):
+    id = PrimaryKeyRelatedField(
+        queryset=Ingredient.objects.all(), required=True
+    )
+    amount = IntegerField(min_value=1)
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ("id", "amount")
+
+
+class RecipeIngredientReadSerializer(ModelSerializer):
+    id = PrimaryKeyRelatedField(source="ingredient", read_only=True)
     name = ReadOnlyField(source="ingredient.name")
     measurement_unit = ReadOnlyField(
         source="ingredient.measurement_unit"
@@ -43,6 +53,7 @@ class RecipeIngredientSerializer(ModelSerializer):
     class Meta:
         model = RecipeIngredient
         fields = ("id", "name", "measurement_unit", "amount")
+        read_only_fields = fields
 
 
 class FoodgramUserSerializer(DjoserUserSerializer):
@@ -76,8 +87,12 @@ class RecipeSerializer(ModelSerializer):
     """
 
     author = FoodgramUserSerializer(read_only=True)
-    ingredients = RecipeIngredientSerializer(source="recipe_ingredients",
-                                             many=True, read_only=True)
+    ingredients = RecipeIngredientCreateSerializer(
+        write_only=True, many=True
+    )
+    ingredients_data = RecipeIngredientReadSerializer(
+        source="recipe_ingredients", many=True, read_only=True
+    )
     is_favorited = SerializerMethodField()
     is_in_shopping_cart = SerializerMethodField()
     image = Base64ImageField()
@@ -85,13 +100,18 @@ class RecipeSerializer(ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            "id", "author", "ingredients", "is_favorited",
-            "is_in_shopping_cart",
+            "id", "author", "ingredients", "ingredients_data",
+            "is_favorited", "is_in_shopping_cart",
             "name", "image", "text", "cooking_time",
         )
         read_only_fields = (
             "is_favorite", "is_shopping_cart",
         )
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret["ingredients"] = ret.pop("ingredients_data")
+        return ret
 
     def get_is_favorited(self, recipe: Recipe) -> bool:
         """
@@ -118,16 +138,11 @@ class RecipeSerializer(ModelSerializer):
         ingredients = self.initial_data.get("ingredients")
         if not data["image"]:
             raise ValidationError("Нет изображения")
-        if (not ingredients
-                or not all((int(item["amount"]) > 0 for item in ingredients))):
-            raise ValidationError("Неверные данные игредиентов")
+        if not ingredients:
+            raise ValidationError("Нет ингредиентов")
         if len(ingredients) != len(set(item["id"] for item in ingredients)):
             raise ValidationError("Ингредиенты должны быть уникальными")
-        if not all((Ingredient.objects.filter(pk=item["id"]).exists()
-                    for item in ingredients)):
-            raise ValidationError("Такого рецепта не существует")
 
-        data["ingredients"] = ingredients
         return data
 
     @atomic
@@ -143,27 +158,25 @@ class RecipeSerializer(ModelSerializer):
     @atomic
     def update(self, recipe: Recipe, validated_data: dict) -> Recipe:
         """Обновляет рецепт"""
-        ingredients = validated_data.pop("ingredients", None)
-        recipe = super().update(recipe, validated_data)
 
+        ingredients = validated_data.pop("ingredients")
         recipe.ingredients.clear()
         self.set_ingredients(recipe, ingredients)
 
-        return recipe
+        return super().update(recipe, validated_data)
 
     def set_ingredients(self, recipe, ingredients_data):
         """
         Создаёт связи между рецептом и ингредиентами.
         """
-        recipe_ingredients = [
+        RecipeIngredient.objects.bulk_create([
             RecipeIngredient(
                 recipe=recipe,
-                ingredient=Ingredient.objects.get(pk=item["id"]),
+                ingredient=item["id"],
                 amount=item["amount"],
             )
             for item in ingredients_data
-        ]
-        RecipeIngredient.objects.bulk_create(recipe_ingredients)
+        ])
 
 
 class UserAvatarSerializer(ModelSerializer):
