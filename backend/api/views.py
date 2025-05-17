@@ -68,8 +68,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    def _handle_post_delete_action(self, request, model, recipe,
-                                   error_message):
+    def _handle_post_delete_action(self, request, model, recipe):
         if request.method == "DELETE":
             get_object_or_404(model, author=request.user,
                               recipe=recipe).delete()
@@ -80,7 +79,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         )
         if not created:
             return Response(
-                {"detail": f"{error_message}: {recipe}"},
+                {"detail": f"Дубликат рецепта: {recipe.name}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         data = RecipeMinSerializer(recipe, context={"request": request}).data
@@ -92,8 +91,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return self._handle_post_delete_action(
             request,
             model=Favourite,
-            recipe=recipe,
-            error_message=f"Рецепт {recipe.name} уже в избранном"
+            recipe=recipe
         )
 
     @action(detail=True, methods=["post", "delete"], url_path="shopping_cart")
@@ -102,8 +100,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return self._handle_post_delete_action(
             request,
             model=ShoppingCart,
-            recipe=recipe,
-            error_message=f"Рецепт {recipe.name} уже в списке покупок"
+            recipe=recipe
         )
 
     @action(detail=False, methods=["get"], url_path="download_shopping_cart")
@@ -200,9 +197,8 @@ class UserViewSet(DjoserUserViewSet):
                         get_or_create(subscriber=subscriber,
                                       publisher=publisher))
         if not created:
-            return Response({"detail": f"Вы уже подписаны на "
-                                       f"{publisher.first_name} "
-                                       f"{publisher.last_name}"},
+            return Response({"detail": f"Вы уже подписаны на"
+                                       f" {publisher.username}"},
                             status=status.HTTP_400_BAD_REQUEST)
         data = UserSubSerializer(publisher,
                                  context={"request": request}).data

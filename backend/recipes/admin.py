@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 
 from .models import (Recipe,
                      Favourite, ShoppingCart,
-                     Ingredient, Subscriber, FoodgramUser)
+                     Ingredient, Subscriber, FoodgramUser, RecipeIngredient)
 
 
 class CookingTimeFilter(SimpleListFilter):
@@ -14,8 +14,6 @@ class CookingTimeFilter(SimpleListFilter):
     """
     title = "время готовки"
     parameter_name = "cooking_time_bin"
-    n = None
-    m = None
 
     def lookups(self, request, model_admin):
         recipes = Recipe.objects.all()
@@ -45,8 +43,8 @@ class CookingTimeFilter(SimpleListFilter):
 
     def queryset(self, request, queryset):
         value = self.value()
-        n = getattr(self, 'n')
-        m = getattr(self, 'm')
+        n = self.n
+        m = self.m
 
         if value == "fast":
             return queryset.filter(cooking_time__lt=n)
@@ -105,6 +103,21 @@ class HasSubscribersFilter(HasRelationFilter):
     related_field = "subscribers"
 
 
+class IngrInRecipesFilter(HasRelationFilter):
+    """
+    Используется ли в рецептах
+    """
+
+    title = "Есть в рецептах"
+    parameter_name = "in_recipes"
+    related_field = "recipes"
+
+
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
+    extra = 1
+
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "cooking_time", "author",
@@ -112,23 +125,26 @@ class RecipeAdmin(admin.ModelAdmin):
     search_fields = ("name", "author__username")
     list_filter = ("author",
                    CookingTimeFilter)
+    inlines = [RecipeIngredientInline]
 
     @admin.display(description="В избранном")
     def favorites_count(self, recipe):
         return recipe.favourites.count()
 
     @admin.display(description="Продукты")
+    @mark_safe
     def formatted_ingredients(self, recipe):
-        return mark_safe("<br>".join([
+        return "<br>".join(
             f"{ri.ingredient.name} - {ri.amount}"
             f" {ri.ingredient.measurement_unit}"
             for ri in recipe.recipe_ingredients.select_related(
                 "ingredient").all()
-        ]))
+        )
 
     @admin.display(description="Картинка")
+    @mark_safe
     def image(self, recipe):
-        return mark_safe(f'<img src="{recipe.image.url}" width="100" />')
+        return f'<img src="{recipe.image.url}" width="100" />'
 
 
 @admin.register(Favourite)
@@ -143,21 +159,24 @@ class ShoppingCartAdmin(admin.ModelAdmin):
     search_fields = ("author__username", "recipe__name")
 
 
+class RecipeCountMixin:
+    @admin.display(description="Число рецептов")
+    def recipes_count(self, ingr):
+        return ingr.recipes.count()
+
+
 @admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
+class IngredientAdmin(admin.ModelAdmin, RecipeCountMixin):
     model = Ingredient
     list_display = ("name", "measurement_unit", "recipes_count")
     ordering = ("name",)
     search_fields = ("name", "measurement_unit")
-    list_filter = ("measurement_unit",)
-
-    @admin.display(description="Число рецептов")
-    def recipes_count(self, obj):
-        return obj.recipes.count()
+    list_filter = ("measurement_unit",
+                   IngrInRecipesFilter)
 
 
 @admin.register(FoodgramUser)
-class FoodgramUserAdmin(UserAdmin):
+class FoodgramUserAdmin(UserAdmin, RecipeCountMixin):
     model = FoodgramUser
     list_display = (
         "id",
@@ -211,17 +230,13 @@ class FoodgramUserAdmin(UserAdmin):
                              f' width="50" height="50"" />')
         return "-"
 
-    @admin.display(description="Рецепты")
-    def recipes_count(self, user):
-        return Recipe.objects.filter(author=user).count()
-
     @admin.display(description="Подписчики")
     def subscriptions_count(self, user):
-        return Subscriber.objects.filter(subscriber=user).count()
+        return user.subscribers.count()
 
     @admin.display(description="Подписки")
     def subscribers_count(self, user):
-        return Subscriber.objects.filter(publisher=user).count()
+        return user.publishers.count()
 
 
 @admin.register(Subscriber)

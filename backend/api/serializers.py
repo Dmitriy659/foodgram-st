@@ -169,14 +169,14 @@ class RecipeSerializer(ModelSerializer):
         """
         Создаёт связи между рецептом и ингредиентами.
         """
-        RecipeIngredient.objects.bulk_create([
+        RecipeIngredient.objects.bulk_create(
             RecipeIngredient(
                 recipe=recipe,
                 ingredient=item["id"],
                 amount=item["amount"],
             )
             for item in ingredients_data
-        ])
+        )
 
 
 class UserAvatarSerializer(ModelSerializer):
@@ -203,6 +203,7 @@ class UserSubSerializer(FoodgramUserSerializer):
             "id", "username", "email", "first_name",
             "last_name", "is_subscribed", "recipes", "recipes_count", "avatar"
         )
+        read_only_fields = fields
 
     def get_recipes(self, obj):
         request = self.context.get("request")
