@@ -105,7 +105,7 @@ class Recipe(models.Model):
                 name="unique_recipe_per_author"
             )
         ]
-        ordering = ("-id",)  # сначала новые рецепты
+        ordering = ("-id",)  # от новых
 
 
 class RecipeIngredient(models.Model):
@@ -113,7 +113,7 @@ class RecipeIngredient(models.Model):
     Связь рецепт - ингредиенты
     """
     recipe = models.ForeignKey(Recipe,
-                               verbose_name="Где используются",
+                               verbose_name="Рецепт",
                                on_delete=models.CASCADE,
                                related_name="recipe_ingredients")
     ingredient = models.ForeignKey(Ingredient,

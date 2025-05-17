@@ -14,16 +14,19 @@ class CookingTimeFilter(SimpleListFilter):
     """
     title = "время готовки"
     parameter_name = "cooking_time_bin"
+    n = None
+    m = None
 
     def lookups(self, request, model_admin):
         recipes = Recipe.objects.all()
         times = list(recipes.values_list("cooking_time", flat=True))
-        if not times:
+
+        if len(set(times)) < 3:
             return []
 
         times.sort()
-        n = times[len(times) // 3]
-        m = times[2 * len(times) // 3]
+        self.n = times[len(times) // 3]
+        self.m = times[2 * len(times) // 3]
 
         def count_in_range(lower, upper=None):
             q = recipes
@@ -34,21 +37,16 @@ class CookingTimeFilter(SimpleListFilter):
             return q.count()
 
         return [
-            ("fast", f"быстро (< {n} мин) ({count_in_range(0, n)})"),
-            ("medium", f"средне (от {n} до {m} мин) ({count_in_range(n, m)})"),
-            ("slow", f"долго (≥ {m} мин) ({count_in_range(m)})"),
+            ("fast", f"быстро (< {self.n} мин) ({count_in_range(0, self.n)})"),
+            ("medium", f"средне (от {self.n} до {self.m} мин) ({count_in_range(self.n, self.m)})"),
+            ("slow", f"долго (≥ {self.m} мин) ({count_in_range(self.m)})"),
         ]
 
     def queryset(self, request, queryset):
-        times = list(queryset.values_list("cooking_time", flat=True))
-        if not times:
-            return queryset
-
-        times.sort()
-        n = times[len(times) // 3]
-        m = times[2 * len(times) // 3]
-
         value = self.value()
+        n = getattr(self, 'n')
+        m = getattr(self, 'm')
+
         if value == "fast":
             return queryset.filter(cooking_time__lt=n)
         elif value == "medium":

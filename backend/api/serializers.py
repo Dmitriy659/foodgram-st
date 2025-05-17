@@ -19,7 +19,7 @@ class RecipeMinSerializer(ModelSerializer):
     class Meta:
         model = Recipe
         fields = ("id", "name", "image", "cooking_time")
-        read_only_fields = ("__all__",)
+        read_only_fields = fields
 
 
 class IngredientSerializer(ModelSerializer):
@@ -59,12 +59,11 @@ class FoodgramUserSerializer(DjoserUserSerializer):
             "first_name", "last_name",
             "is_subscribed", "avatar",
         )
-        read_only_fields = ("is_subscribed", "avatar")
+        read_only_fields = fields
 
     def get_is_subscribed(self, viewed_user):
         request = self.context.get("request")
         return (request
-                and hasattr(request, "user")
                 and request.user.is_authenticated
                 and Subscriber.objects.
                 filter(publisher=viewed_user,

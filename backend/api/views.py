@@ -1,6 +1,3 @@
-import base64
-from io import BytesIO
-
 from django.http.response import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
@@ -18,7 +15,7 @@ from recipes.models import (Ingredient, Recipe,
                             Subscriber)
 from .filters import IngredientFilter
 from .paginators import ApiPagination
-from .permissions import AuthorPermission
+from .permissions import AuthorOrReadPermission
 from .serializers import (IngredientSerializer, RecipeSerializer,
                           RecipeMinSerializer, UserAvatarSerializer,
                           UserSubSerializer)
@@ -49,7 +46,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         elif self.action in ("list", "retrieve", "get_link"):
             return [AllowAny()]
         elif self.action in ("partial_update", "destroy"):
-            return [IsAuthenticated(), AuthorPermission()]
+            return [IsAuthenticated(), AuthorOrReadPermission()]
         raise MethodNotAllowed(f"Method {self.action} is not allowed")
 
     def get_queryset(self):
@@ -71,48 +68,49 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    def _handle_post_delete_action(self, request, model, recipe, error_message):
+        if request.method == "DELETE":
+            get_object_or_404(model, author=request.user, recipe=recipe).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        obj, created = model.objects.get_or_create(
+            author=request.user, recipe=recipe
+        )
+        if not created:
+            return Response(
+                {"detail": f"{error_message}: {recipe}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        data = RecipeMinSerializer(recipe, context={"request": request}).data
+        return Response(data, status=status.HTTP_201_CREATED)
+
+
     @action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
-
-        if request.method == "POST":
-            obj, created = (Favourite.objects.
-                            get_or_create(author=request.user, recipe=recipe))
-            if not created:
-                return Response({"detail": "Рецепт уже в избранном"},
-                                status=status.HTTP_400_BAD_REQUEST)
-            data = RecipeMinSerializer(recipe,
-                                       context={"request": request}).data
-            return Response(data, status=status.HTTP_201_CREATED)
-
-        get_object_or_404(Favourite, author=request.user,
-                          recipe=recipe).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self._handle_post_delete_action(
+            request,
+            model=Favourite,
+            recipe=recipe,
+            error_message=f"Рецепт {recipe.name} уже в избранном"
+        )
 
     @action(detail=True, methods=["post", "delete"], url_path="shopping_cart")
     def shopping_cart(self, request, pk=None):
         recipe = get_object_or_404(Recipe, pk=pk)
-
-        if request.method == "POST":
-            obj, created = (ShoppingCart.objects.
-                            get_or_create(author=request.user, recipe=recipe))
-            if not created:
-                return Response({"error": "Рецепт уже в корзине"},
-                                status=status.HTTP_400_BAD_REQUEST)
-            data = RecipeMinSerializer(recipe,
-                                       context={"request": request}).data
-            return Response(data, status=status.HTTP_201_CREATED)
-
-        get_object_or_404(ShoppingCart, author=request.user,
-                          recipe=recipe).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self._handle_post_delete_action(
+            request,
+            model=ShoppingCart,
+            recipe=recipe,
+            error_message=f"Рецепт {recipe.name} уже в списке покупок"
+        )
 
     @action(detail=False, methods=["get"], url_path="download_shopping_cart")
     def download_shopping_cart(self, request):
         user = request.user
         ingredients_dict = {}
 
-        recipes_cart = ShoppingCart.objects.filter(author=user)
+        recipes_cart = user.shoppingcarts.all()
 
         for recipe_cart in recipes_cart:
             recipe = recipe_cart.recipe
@@ -125,13 +123,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 else:
                     ingredients_dict[name] = {"amount": amount, "unit": unit}
 
+        sorted_ingredients = sorted(ingredients_dict.items())
+
         lines = [
             f"Список ингредиентов на {now().strftime("%Y-%m-%d")}:",
             "",
             "Ингредиенты:"
         ]
 
-        for idx, (name, det) in enumerate(ingredients_dict.items(), start=1):
+        for idx, (name, det) in enumerate(sorted_ingredients, start=1):
             lines.append(f"{idx}. {name}: {det["amount"]} "
                          f"{det["unit"]}")
 
@@ -143,26 +143,20 @@ class RecipeViewSet(viewsets.ModelViewSet):
                          f" {recipe.author.get_full_name()})")
 
         file_content = "\n".join(lines)
-        buffer = BytesIO()
-        buffer.write(file_content.encode("utf-8"))
-        buffer.seek(0)
 
         response = FileResponse(
-            buffer,
+            file_content,
             as_attachment=True,
             filename="shopping_list.txt",
-            content_type="text/plain; charset=utf-8"
+            content_type="text/plain"
         )
         return response
 
     @action(["get"], detail=True, url_path="get-link")
     def get_link(self, request, pk):
-        """Создание короткой ссылки через хэширование id"""
-        recipe = get_object_or_404(Recipe, pk=pk)
-        encoded_id = base64.urlsafe_b64encode(str(recipe.id).
-                                              encode()).decode().rstrip("=")
-        base_url = request.build_absolute_uri("/").rstrip("/")
-        return Response({"short-link": f"{base_url}/s/{encoded_id}"},
+        """Создание короткой ссылки"""
+        return Response({"short-link": f"{request.build_absolute_uri('/')}s/"
+                                       f"{get_object_or_404(Recipe, pk=pk).id}"},
                         status=status.HTTP_200_OK)
 
 
@@ -192,23 +186,25 @@ class UserViewSet(DjoserUserViewSet):
         publisher = get_object_or_404(FoodgramUser, id=id)
         subscriber = request.user
 
-        if request.method == "POST":
-            if publisher == subscriber:
-                return Response({"detail": "Нельзя подписаться на себя"},
-                                status=status.HTTP_400_BAD_REQUEST)
-            obj, created = (Subscriber.objects.
-                            get_or_create(subscriber=subscriber,
-                                          publisher=publisher))
-            if not created:
-                return Response({"detail": "Вы уже подписаны"},
-                                status=status.HTTP_400_BAD_REQUEST)
-            data = UserSubSerializer(publisher,
-                                     context={"request": request}).data
-            return Response(data, status=status.HTTP_201_CREATED)
+        if request.method == "DELETE":
+            get_object_or_404(Subscriber, subscriber=subscriber,
+                              publisher=publisher).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-        get_object_or_404(Subscriber, subscriber=subscriber,
-                          publisher=publisher).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if publisher == subscriber:
+            return Response({"detail": "Нельзя подписаться на себя"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        obj, created = (Subscriber.objects.
+                        get_or_create(subscriber=subscriber,
+                                      publisher=publisher))
+        if not created:
+            return Response({"detail": f"Вы уже подписаны на "
+                                       f"{publisher.first_name} "
+                                       f"{publisher.last_name}"},
+                            status=status.HTTP_400_BAD_REQUEST)
+        data = UserSubSerializer(publisher,
+                                 context={"request": request}).data
+        return Response(data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=["get"],
             permission_classes=[IsAuthenticated],
