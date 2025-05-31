@@ -176,7 +176,7 @@ class RecipeSerializer(ModelSerializer):
                 amount=item["amount"],
             )
             for item in ingredients_data
-        )
+        )  # тест
 
 
 class UserAvatarSerializer(ModelSerializer):
